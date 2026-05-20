@@ -57,13 +57,6 @@ $ stash
 ## Install
 
 ```bash
-brew tap SectorOPS/Stash https://github.com/SectorOPS/Stash
-brew install SectorOPS/Stash/stash
-```
-
-Or in one shot:
-
-```bash
 brew install SectorOPS/Stash/stash
 ```
 
