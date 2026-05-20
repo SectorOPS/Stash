@@ -14,43 +14,22 @@ This doc is the one-time setup + the per-release recipe.
 
 ## One-time setup
 
-1. **Push `stash` itself to GitHub** at `github.com/SectorOPS/Stash` (the
-   homepage in `Formula/stash.rb` already points there).
+The canonical repo is `github.com/SectorOPS/homebrew-Stash` — the
+`homebrew-` prefix is Homebrew's tap-naming convention, and it lets users
+run `brew tap SectorOPS/Stash` without passing an explicit URL.
+`github.com/SectorOPS/Stash` is kept as a GitHub-managed redirect so old
+links still resolve. Source code + `Formula/stash.rb` live in the same
+repo (the simplest possible tap layout).
 
-   ```bash
-   cd <path/to/this/repo>
-   git init -b main
-   git add .
-   git commit -m "Initial stash"
-   git remote add origin git@github.com:SectorOPS/Stash.git
-   git push -u origin main
-   ```
+End-user install:
 
-2. **Create a Homebrew tap repo.** Homebrew taps are just GitHub repos whose
-   name starts with `homebrew-`. The simplest setup: keep the formula in the
-   same repo as the source. With the repo named `SectorOPS/Stash`, Homebrew
-   will pick up any `Formula/*.rb` automatically when users `brew tap`.
+```bash
+brew install SectorOPS/Stash/stash
+```
 
-   That's already wired — `Formula/stash.rb` exists at the repo root. Once the
-   repo is public, users can:
-
-   ```bash
-   brew tap SectorOPS/Stash https://github.com/SectorOPS/Stash
-   brew install stash
-   ```
-
-   `brew tap SectorOPS/Stash` (without the URL) also works because Homebrew
-   auto-rewrites it to `https://github.com/SectorOPS/homebrew-Stash`. If you
-   *also* want that short form, mirror the repo to `SectorOPS/homebrew-Stash`
-   or rename the canonical repo.
-
-   Or stash the formula in a dedicated tap: `SectorOPS/homebrew-tap` with
-   `Formula/stash.rb` inside it, and end users run
-   `brew install SectorOPS/tap/stash`.
-
-3. **Create a GitHub Personal Access Token** (only needed once if pushing tags
-   manually) — the bundled GH Actions workflow uses `GITHUB_TOKEN` and needs
-   no extra secrets.
+That's it — no separate `brew tap` step needed; brew auto-taps on the
+first install. GH Actions builds the per-platform binaries on each
+`v*` tag push (`GITHUB_TOKEN` is enough, no extra secrets).
 
 ---
 
