@@ -3,32 +3,45 @@ import type { LaunchOptions, Tool } from "./types";
 import { openInNewWindow, type SpawnPlan } from "./terminal";
 
 /**
- * Build the argv that resumes (or starts) a session for the given tool.
+ * Build the argv that resumes / forks / starts a session for the given tool.
  *
- * - claude   : `claude --resume <id>` or just `claude`. Skip-permissions adds
- *              `--dangerously-skip-permissions`.
- * - codex    : `codex resume <id>` (no id → `codex`). Skip-permissions adds
+ * - claude   : `claude --resume <id> [--fork-session]` or just `claude`.
+ *              Skip-permissions adds `--dangerously-skip-permissions`.
+ * - codex    : `codex resume <id>` (or `codex fork <id>` when fork=true).
+ *              No id → just `codex`. Skip-permissions adds
  *              `--dangerously-bypass-approvals-and-sandbox`.
- * - opencode : `opencode --session <id>` or `opencode`. No documented
- *              skip-permissions flag — that option is silently dropped.
+ * - opencode : `opencode --session <id> [--fork]` or `opencode`. No
+ *              documented skip-permissions flag — that option is silently
+ *              dropped.
+ *
+ * Fork semantics differ across tools (claude copies+switches, codex creates
+ * a new rollout referencing the parent, opencode does a sibling); the row
+ * label in the picker stays the same and the result is the same from the
+ * user's perspective — new session id, parent untouched, you're launched
+ * into the child.
  */
 export function buildCommand(opts: LaunchOptions): string[] {
+  const fork = opts.fork === true && opts.sessionId !== null;
   switch (opts.tool) {
     case "claude": {
       const cmd: string[] = ["claude"];
       if (opts.sessionId) cmd.push("--resume", opts.sessionId);
+      if (fork) cmd.push("--fork-session");
       if (opts.skipPermissions) cmd.push("--dangerously-skip-permissions");
       return cmd;
     }
     case "codex": {
       const cmd: string[] = ["codex"];
-      if (opts.sessionId) cmd.push("resume", opts.sessionId);
+      if (opts.sessionId) cmd.push(fork ? "fork" : "resume", opts.sessionId);
       if (opts.skipPermissions) cmd.push("--dangerously-bypass-approvals-and-sandbox");
       return cmd;
     }
     case "opencode": {
       const cmd: string[] = ["opencode"];
-      if (opts.sessionId) cmd.push("--session", opts.sessionId);
+      if (opts.sessionId) {
+        cmd.push("--session", opts.sessionId);
+        if (fork) cmd.push("--fork");
+      }
       // opencode has no documented skip-permissions flag at the CLI level.
       return cmd;
     }

@@ -37,6 +37,19 @@ $ stash
 └
 ```
 
+## What's new in 0.3.1
+
+- **Fork-on-resume.** A single `⤴ Fork on resume: ON/off` toggle in the
+  session menu (space-toggleable like the other rows). Branches every
+  resume into a fresh session id so the parent stays untouched. Wires
+  through to `claude --fork-session`, `codex fork <id>`, and
+  `opencode --fork --session <id>` transparently. Also exposed as
+  `stash <name> --fork` on the command line.
+- **Rename-on-miss.** When `stash <name>` finds the registered directory
+  no longer exists, it searches every indexed session for a live
+  directory with the same basename and asks you to confirm the move (or
+  pick between several matches). Never auto-decides.
+
 ## What's new in 0.3
 
 - **`stash search`** — fuzzy-match across every session you've ever

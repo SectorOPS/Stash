@@ -41,4 +41,7 @@ export interface LaunchOptions {
   sessionId: string | null;
   skipPermissions: boolean;
   newWindow: boolean;
+  /** Create a new session ID branching from the parent — keeps the original
+   *  intact. Only meaningful when sessionId is set. */
+  fork?: boolean;
 }

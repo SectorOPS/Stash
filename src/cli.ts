@@ -35,6 +35,7 @@ const BOOLEAN_FLAGS = new Set([
   "new-window",
   "new",
   "fresh",
+  "fork",
   "dry-run",
   "skip-permissions",
 ]);
@@ -221,6 +222,14 @@ async function runResumeByName(
     return 1;
   }
 
+  // If the registered dir no longer exists, search for a directory with the
+  // same basename in the indexed session list and offer to relocate.
+  if (!existsSync(proj.dir)) {
+    const relocated = await maybeRelocate(registry, proj);
+    if (relocated === false) return 1;
+    // otherwise proj.dir was updated in place; fall through and resume
+  }
+
   const tool = (args.flags["tool"] as Tool | undefined) ?? proj.lastTool ?? proj.defaultTool;
   if (!ALL_TOOLS.includes(tool)) {
     console.error(`stash: unknown tool "${tool}"`);
@@ -249,6 +258,7 @@ async function runResumeByName(
     sessionId,
     skipPermissions: skipPermissions && toolSupportsSkipPermissions(tool),
     newWindow,
+    fork: flagBool(args, "fork") === true && sessionId !== null,
   };
 
   if (flagBool(args, "dry-run", "n")) {
@@ -265,6 +275,73 @@ async function runResumeByName(
     console.log(dim(`stash: ${result.plan.description}`));
   }
   return 0;
+}
+
+/**
+ * Called when `stash <name>` finds the registered dir no longer exists.
+ * Looks across all indexed sessions for a directory whose basename matches
+ * the lost project, prompts the user (never auto-decides), and updates the
+ * registry on confirmation. Returns true if recovered, false to abort.
+ */
+async function maybeRelocate(
+  registry: import("./types").Registry,
+  proj: RegisteredProject,
+): Promise<boolean> {
+  const base = basename(proj.dir);
+  if (!base) return false;
+
+  const state = await discoverAll(registry.projects);
+  const candidates = state.allGroups
+    .map((g) => g.directory)
+    .filter((d) => d !== proj.dir && existsSync(d) && basename(d) === base);
+
+  if (candidates.length === 0) {
+    console.error(
+      `stash: ${proj.name}'s directory is missing: ${tildeify(proj.dir)}\n` +
+        `       No project with basename "${base}" found in indexed sessions.\n` +
+        `       Run \`stash add ${proj.name} --dir <new-path>\` to update by hand,\n` +
+        `       or \`stash rm ${proj.name}\` to unregister it.`,
+    );
+    return false;
+  }
+
+  const p = await import("@clack/prompts");
+  console.log();
+  p.note(
+    `${proj.name}'s registered directory is missing:\n  ${dim(tildeify(proj.dir))}\n\n` +
+      `Found ${candidates.length} live director${candidates.length === 1 ? "y" : "ies"} with the same basename.`,
+    "Project may have moved",
+  );
+
+  let chosen: string | symbol;
+  if (candidates.length === 1) {
+    const yes = await p.confirm({
+      message: `Update ${proj.name} to point at ${tildeify(candidates[0]!)}?`,
+      initialValue: true,
+    });
+    if (!yes || typeof yes === "symbol") return false;
+    chosen = candidates[0]!;
+  } else {
+    chosen = await p.select({
+      message: `Which directory should ${proj.name} point at?`,
+      options: [
+        ...candidates.map((d) => ({ value: d, label: tildeify(d) })),
+        { value: "__cancel__", label: dim("← cancel") },
+      ],
+    });
+    if (typeof chosen === "symbol" || chosen === "__cancel__") return false;
+  }
+
+  // Mutate proj in place + persist. Reset lastSessionId since the prior id
+  // was attached to the now-missing path.
+  proj.dir = chosen as string;
+  proj.lastSessionId = undefined;
+  proj.updatedAt = new Date().toISOString();
+  await saveRegistry(registry);
+  console.log(
+    `${pc.green("✓")} ${proj.name} now points at ${tildeify(proj.dir)}`,
+  );
+  return true;
 }
 
 async function resolveMostRecentSession(
@@ -423,6 +500,7 @@ function printHelp(): void {
     `      --here                     run in current terminal (no new window)`,
     `  -w, --new-window               force a new terminal window`,
     `      --new                      start a fresh session (don't resume)`,
+    `      --fork                     resume into a new session id (parent untouched)`,
     `      --tool claude|codex|opencode`,
     `      --session <id>             resume a specific session id`,
     `  -n, --dry-run                  print the command, don't run`,

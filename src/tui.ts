@@ -216,6 +216,7 @@ async function sessionMenu(
   const reg = group.registered;
   let skipPermissions = reg?.skipPermissions ?? defaults.skipPermissions;
   let newWindow = reg?.newWindow ?? defaults.newWindow;
+  let fork = false;
 
   // Pre-load per-session stats (message count, tokens) so the picker rows
   // can show triage info. Bounded by group size; cheap per row.
@@ -242,6 +243,7 @@ async function sessionMenu(
           sessionId: s.id,
           skipPermissions: skipPermissions && toolSupportsSkipPermissions(s.tool),
           newWindow,
+          fork,
         }),
       );
       const info = statsByKey.get(`${s.tool}:${s.id}`);
@@ -253,10 +255,11 @@ async function sessionMenu(
         parts.push(`~${formatTokens(info.totalTokens)} tok`);
       }
       parts.push(dim(previewCmd));
+      const verb = fork ? "Fork" : "Resume";
       options.push({
         value: `resume:${s.tool}:${s.id}`,
         label: `${toolBadge(s.tool)}  ${truncate(s.title, 50)}`,
-        hint: parts.join(" · "),
+        hint: `${verb} · ${parts.join(" · ")}`,
       });
     }
 
@@ -295,6 +298,15 @@ async function sessionMenu(
         newWindow ? pc.cyan("ON") : "off"
       }`,
     });
+    options.push({
+      value: "__toggle_fork__",
+      label: `${fork ? "⤴" : "·"} Fork on resume: ${
+        fork ? pc.cyan("ON") : "off"
+      }`,
+      hint: fork
+        ? "new session id, parent untouched"
+        : undefined,
+    });
     if (sessions.length > 0) {
       options.push({
         value: "__delete__",
@@ -330,7 +342,9 @@ async function sessionMenu(
       message: `${pc.bold(group.displayName)}  ${dim(tildeify(group.directory))}`,
       options: options.filter((o) => !o.value.startsWith("__sep")),
       spaceTogglesOn: (v) =>
-        v === "__toggle_perm__" || v === "__toggle_window__",
+        v === "__toggle_perm__" ||
+        v === "__toggle_window__" ||
+        v === "__toggle_fork__",
     });
 
     if (isCancel(value)) return null;
@@ -342,6 +356,10 @@ async function sessionMenu(
     }
     if (value === "__toggle_window__") {
       newWindow = !newWindow;
+      continue;
+    }
+    if (value === "__toggle_fork__") {
+      fork = !fork;
       continue;
     }
     if (value === "__save_defaults__" && reg) {
@@ -390,6 +408,7 @@ async function sessionMenu(
       skipPermissions:
         skipPermissions && toolSupportsSkipPermissions(tool),
       newWindow,
+      fork: kind === "resume" && fork,
     };
 
     // Persist last-used for registered projects so `stash <name>` does the
