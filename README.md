@@ -129,6 +129,17 @@ stash where                  # print registry path
 stash edit                   # open registry in $EDITOR
 ```
 
+### Health check
+
+```bash
+stash doctor                 # verify each tool's session format still parses
+```
+
+Runs a per-tool check that opens one session, looks for the fields stash
+depends on, and reports `ok` / `warn` / `error` with a one-line explanation.
+Exits non-zero on any error so you can wire it into CI or a shell `precmd`.
+Run it after upgrading claude / codex / opencode to catch schema drift early.
+
 ## Flags reference
 
 ```
@@ -153,6 +164,25 @@ stash edit                   # open registry in $EDITOR
 Titles come from each tool's own metadata: claude's `ai-title` (falling back to
 the last user prompt), codex's `thread_name` in the session index, opencode's
 session `title` column.
+
+Token totals are pulled from each tool's own usage tracking and shown where
+they're accurate: **claude** records `usage.input_tokens` / `usage.output_tokens`
+per assistant turn and **opencode** records `tokens.input` / `tokens.output`
+per message — both are summed into the `~Nk tok` you see in the picker.
+**codex** doesn't record per-turn usage in its rollouts, so codex rows show
+only `N msgs`. The asymmetry is deliberate — better to show a real number
+where one exists than to fake it everywhere.
+
+### Tested against
+
+Stash is tested against the following CLI versions. `stash doctor` will tell
+you if your install diverges in a way that breaks parsing.
+
+| Tool     | Tested up to | Storage format                  |
+| -------- | ------------ | ------------------------------- |
+| claude   | 2.1.x        | JSONL with `ai-title`, `last-prompt`, `user`, `assistant` events |
+| codex    | 0.129.x      | rollout JSONL with `session_meta` + `response_item` envelopes |
+| opencode | 1.14.x       | SQLite schema with `session` / `message` / `part` tables |
 
 The encoded-path scheme claude uses (`/` and `.` both map to `-`) is ambiguous
 on decode, so stash walks the real filesystem to disambiguate (e.g. it knows
