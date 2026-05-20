@@ -37,6 +37,18 @@ $ stash
 └
 ```
 
+## What's new in 0.2
+
+- **`stash doctor`** — three checks across claude / codex / opencode that
+  validate each tool's on-disk format still parses. Run it after upgrading
+  any of the three to catch schema drift before it surprises you.
+- **Message counts and (where the tool exposes them) real token totals**
+  on every picker row, so two sessions with similar titles aren't a coin
+  flip anymore.
+- **"Tested against" version table** in the docs so you know which CLI
+  releases the parser was built for, and `doctor` will tell you when yours
+  diverge.
+
 ## What it actually solves
 
 - **Lost resume commands.** Every tool has a `--resume <id>` (or equivalent),

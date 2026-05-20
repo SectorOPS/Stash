@@ -1,26 +1,23 @@
 #!/usr/bin/env bash
-# One-shot release script. Drives the whole flow:
+# One-shot release script.
 #
-#   1. Bump version in package.json
-#   2. Commit the bump
-#   3. Tag v<version> and push (triggers GH Actions to build + upload binaries)
-#   4. Wait for the release workflow to finish on the remote
-#   5. Update Formula/stash.rb with the new urls + sha256s
-#   6. Commit + push the formula
-#
-# After this, anyone on `brew tap SectorOPS/Stash` can run
-#   brew update && brew upgrade stash
-# to pick up the new version.
+#   1. Bump package.json (no-op if version already matches)
+#   2. Commit + tag v<version> and push to the source repo
+#   3. Wait for the source repo's GH Actions release workflow to finish
+#      (builds 4 binaries, attaches tarballs + sha256 sidecars)
+#   4. Hand off to update-formula.sh which clones the *tap* repo, rewrites
+#      Formula/stash.rb against the new sha256s, pushes, and verifies that
+#      the tap shows the bumped version before exiting.
 #
 # Usage:
-#   scripts/release.sh 0.2.0
-#   scripts/release.sh patch    # 0.1.0 -> 0.1.1
-#   scripts/release.sh minor    # 0.1.0 -> 0.2.0
-#   scripts/release.sh major    # 0.1.0 -> 1.0.0
+#   scripts/release.sh 0.3.0       # explicit version
+#   scripts/release.sh patch       # 0.2.1 -> 0.2.2
+#   scripts/release.sh minor       # 0.2.1 -> 0.3.0
+#   scripts/release.sh major       # 0.2.1 -> 1.0.0
 #
 # Env:
-#   SKIP_PUSH=1   skip pushing the tag / formula commit (dry run)
-#   SKIP_WAIT=1   skip waiting for GH Actions (use if you've already built)
+#   SKIP_PUSH=1   skip pushing the tag (dry run, useful for testing)
+#   SKIP_WAIT=1   skip the GH-Actions wait (use if you've already built)
 
 set -euo pipefail
 
@@ -33,7 +30,6 @@ need() {
     exit 1
   }
 }
-
 need jq
 need git
 need gh
@@ -76,7 +72,7 @@ else
   echo "    package.json already at ${NEW}; skipping bump commit"
 fi
 
-# 3. Tag + push
+# 2. Tag + push to source repo
 git tag "v${NEW}"
 if [ -z "${SKIP_PUSH:-}" ]; then
   git push origin HEAD
@@ -85,29 +81,31 @@ else
   echo "(SKIP_PUSH=1) tag created locally; skipping push"
 fi
 
-# 4. Wait for GH Actions
+# 3. Wait for GH Actions on the source repo
 if [ -z "${SKIP_WAIT:-}" ] && [ -z "${SKIP_PUSH:-}" ]; then
   echo "==> waiting for release workflow to finish…"
-  # Give Actions a moment to register the tag push.
   sleep 5
-  gh run watch --exit-status \
-    --workflow release.yml \
-    --branch "v${NEW}" \
-    || {
-      echo "Release workflow failed — fix it before continuing." >&2
-      exit 1
-    }
+  # `gh run watch` requires a run id; we look up the most recent one for
+  # this tag.
+  for _ in 1 2 3 4 5; do
+    RUN_ID=$(gh run list --workflow=release.yml --limit 5 \
+      --json databaseId,headBranch \
+      --jq ".[] | select(.headBranch==\"v${NEW}\") | .databaseId" | head -1)
+    [ -n "$RUN_ID" ] && break
+    sleep 5
+  done
+  if [ -z "${RUN_ID:-}" ]; then
+    echo "Could not find a workflow run for v${NEW}. Check the Actions tab." >&2
+    exit 1
+  fi
+  gh run watch "$RUN_ID" --exit-status --interval 15 || {
+    echo "Release workflow failed — fix it before continuing." >&2
+    exit 1
+  }
 fi
 
-# 5. Update formula (pulls sha256s from the release)
+# 4. Update the tap (pulls sha256s from the release, pushes formula, verifies)
 scripts/update-formula.sh "${NEW}"
-
-# 6. Commit + push the formula
-git add Formula/stash.rb
-git commit -m "Formula: bump to ${NEW}"
-if [ -z "${SKIP_PUSH:-}" ]; then
-  git push origin HEAD
-fi
 
 echo
 echo "✓ Released v${NEW}"
