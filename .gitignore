@@ -11,3 +11,6 @@ dist/
 
 # Bun build scratch files (created in cwd by `bun build --compile`)
 .*.bun-build
+
+# Local-only demo-mode fixtures (STASH_DEMO=1) — never ship.
+src/demo.ts
