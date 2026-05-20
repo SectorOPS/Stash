@@ -1,8 +1,6 @@
-```
-  ┏━┓╺┳╸┏━┓┏━┓╻ ╻
-  ┗━┓ ┃ ┣━┫┗━┓┣━┫
-  ┗━┛ ╹ ╹ ╹┗━┛╹ ╹
-```
+<p align="center">
+  <img src="assets/stash.png" alt="stash — interactive launcher for claude / codex / opencode sessions" width="600">
+</p>
 
 > Have you ever started a CLI project, forgot to note down the resume command,
 > then burned a stack of tokens making the agent re-read the repo just to get
