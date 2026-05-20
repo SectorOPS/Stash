@@ -1,0 +1,13 @@
+node_modules/
+bun.lockb
+.DS_Store
+*.log
+
+# Compiled single-binary build (if you ever run `bun run build`).
+bin/stash-bin
+
+# Release artefacts produced by scripts/build-release.sh
+dist/
+
+# Bun build scratch files (created in cwd by `bun build --compile`)
+.*.bun-build

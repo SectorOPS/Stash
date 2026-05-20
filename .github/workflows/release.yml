@@ -1,0 +1,60 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14            # Apple Silicon
+            target: bun-darwin-arm64
+            short: darwin-arm64
+          - os: macos-13            # Intel
+            target: bun-darwin-x64
+            short: darwin-x64
+          - os: ubuntu-24.04
+            target: bun-linux-x64
+            short: linux-x64
+          - os: ubuntu-24.04-arm
+            target: bun-linux-arm64
+            short: linux-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      - name: Build standalone binary
+        run: |
+          mkdir -p "dist/${{ matrix.short }}"
+          bun build src/index.ts \
+            --compile \
+            --target=${{ matrix.target }} \
+            --outfile "dist/${{ matrix.short }}/stash"
+          chmod +x "dist/${{ matrix.short }}/stash"
+
+      - name: Pack tarball
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          tar -C "dist/${{ matrix.short }}" -czf \
+            "dist/stash-${VERSION}-${{ matrix.short }}.tar.gz" stash
+          shasum -a 256 "dist/stash-${VERSION}-${{ matrix.short }}.tar.gz" \
+            > "dist/stash-${VERSION}-${{ matrix.short }}.tar.gz.sha256"
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/*.sha256

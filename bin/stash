@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# stash — thin launcher that resolves to the bundled source and runs it via bun.
+set -euo pipefail
+
+# Resolve symlinks so $0 points to this file in its real location.
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do
+  DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+  SOURCE="$( readlink "$SOURCE" )"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+ROOT="$( cd -P "$DIR/.." && pwd )"
+
+if ! command -v bun >/dev/null 2>&1; then
+  echo "stash: 'bun' is required but was not found in PATH." >&2
+  echo "       Install it from https://bun.sh and retry." >&2
+  exit 127
+fi
+
+exec bun --bun "$ROOT/src/index.ts" "$@"

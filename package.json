@@ -1,0 +1,35 @@
+{
+  "name": "stash",
+  "version": "0.1.0",
+  "description": "Interactive launcher that resumes claude / codex / opencode sessions across all your projects.",
+  "license": "MIT",
+  "homepage": "https://github.com/SectorOPS/Stash",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SectorOPS/Stash.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SectorOPS/Stash/issues"
+  },
+  "type": "module",
+  "private": true,
+  "bin": {
+    "stash": "./bin/stash"
+  },
+  "scripts": {
+    "start": "bun src/index.ts",
+    "build": "bun build src/index.ts --compile --outfile bin/stash-bin",
+    "typecheck": "bun --bun tsc --noEmit"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.7.0",
+    "picocolors": "^1.0.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "bun": ">=1.1.0"
+  }
+}
