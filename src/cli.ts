@@ -97,7 +97,8 @@ export async function runCli(rawArgs: string[]): Promise<number> {
     return 0;
   }
   if (args.flags["version"] || args.flags["V"]) {
-    console.log("stash 0.1.0");
+    const { version } = await import("../package.json");
+    console.log(`stash ${version}`);
     return 0;
   }
 
