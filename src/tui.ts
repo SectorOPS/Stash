@@ -21,10 +21,11 @@ import {
 import { discoverAll } from "./discover";
 import { buildCommand, shellJoin, toolSupportsSkipPermissions } from "./launch";
 import { deleteSessions, findDuplicateSessions } from "./delete";
-import { dim, timeAgo, tildeify, toolBadge, truncate } from "./format";
+import { dim, formatTokens, timeAgo, tildeify, toolBadge, truncate } from "./format";
 import { toggleSelect } from "./select";
 import { printLogo } from "./logo";
 import { sweepable, clutterReason } from "./clutter";
+import { previewSession, shortenForPreview } from "./preview";
 
 const CANCEL = Symbol("cancel");
 
@@ -216,6 +217,16 @@ async function sessionMenu(
   let skipPermissions = reg?.skipPermissions ?? defaults.skipPermissions;
   let newWindow = reg?.newWindow ?? defaults.newWindow;
 
+  // Pre-load per-session stats (message count, tokens) so the picker rows
+  // can show triage info. Bounded by group size; cheap per row.
+  const stats = await Promise.all(
+    group.sessions.map(async (s) => ({
+      key: `${s.tool}:${s.id}`,
+      info: await previewSession(s),
+    })),
+  );
+  const statsByKey = new Map(stats.map((x) => [x.key, x.info]));
+
   while (true) {
     const sessions = [...group.sessions].sort(
       (a, b) => b.updatedAt - a.updatedAt,
@@ -233,10 +244,19 @@ async function sessionMenu(
           newWindow,
         }),
       );
+      const info = statsByKey.get(`${s.tool}:${s.id}`);
+      const parts: string[] = [timeAgo(s.updatedAt)];
+      if (info?.messageCount != null) {
+        parts.push(`${info.messageCount} msgs`);
+      }
+      if (info?.totalTokens != null) {
+        parts.push(`~${formatTokens(info.totalTokens)} tok`);
+      }
+      parts.push(dim(previewCmd));
       options.push({
         value: `resume:${s.tool}:${s.id}`,
         label: `${toolBadge(s.tool)}  ${truncate(s.title, 50)}`,
-        hint: `${timeAgo(s.updatedAt)} · ${dim(previewCmd)}`,
+        hint: parts.join(" · "),
       });
     }
 
@@ -382,6 +402,38 @@ async function sessionMenu(
         launchOpts.sessionId,
       );
       await saveRegistry(registry);
+    }
+
+    // Show a preview of the last few messages so the user can confirm this
+    // is the right conversation before we spawn a new terminal.
+    if (kind === "resume" && sessionId) {
+      const session = sessions.find(
+        (s) => s.tool === tool && s.id === sessionId,
+      );
+      if (session) {
+        const preview = await previewSession(session);
+        const lines: string[] = [];
+        if (preview.messageCount !== null) {
+          let stats = `${preview.messageCount} message${preview.messageCount === 1 ? "" : "s"}`;
+          if (preview.totalTokens !== null) {
+            stats += ` · ~${formatTokens(preview.totalTokens)} tokens`;
+          }
+          lines.push(dim(stats));
+          lines.push("");
+        }
+        if (preview.lastUser) {
+          lines.push(pc.bold("you: ") + shortenForPreview(preview.lastUser));
+          lines.push("");
+        }
+        if (preview.lastAssistant) {
+          lines.push(
+            pc.bold(`${tool}: `) + shortenForPreview(preview.lastAssistant),
+          );
+        }
+        if (lines.length > 0) {
+          p.note(lines.join("\n"), `${truncate(session.title, 60)}`);
+        }
+      }
     }
 
     // Show what we're about to do and confirm.

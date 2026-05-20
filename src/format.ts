@@ -52,3 +52,10 @@ export function dim(s: string): string {
 export function bold(s: string): string {
   return pc.bold(s);
 }
+
+/** Format token counts as 12.3k / 4.5M — for picker hints and previews. */
+export function formatTokens(n: number): string {
+  if (n < 1000) return String(n);
+  if (n < 1_000_000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "k";
+  return (n / 1_000_000).toFixed(2).replace(/\.00$/, "") + "M";
+}
