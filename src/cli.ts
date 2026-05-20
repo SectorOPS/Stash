@@ -117,6 +117,8 @@ export async function runCli(rawArgs: string[]): Promise<number> {
     "path",
     "edit",
     "help",
+    "doctor",
+    "check",
   ]);
 
   if (!reserved.has(args.command)) {
@@ -143,6 +145,9 @@ export async function runCli(rawArgs: string[]): Promise<number> {
       return 0;
     case "edit":
       return await runEdit();
+    case "doctor":
+    case "check":
+      return await (await import("./doctor")).runDoctor();
     default:
       printHelp();
       return 1;
@@ -383,6 +388,7 @@ function printHelp(): void {
     `  stash rm ${pc.cyan("<name>")}                remove a registered project`,
     `  stash where                    print the registry path`,
     `  stash edit                     open the registry in $EDITOR`,
+    `  stash doctor                   verify each tool's session format still parses`,
     "",
     `${pc.bold("FLAGS")} ${dim("(work with `stash` and `stash <name>`)")}`,
     `  -y, --yolo                     run with --dangerously-skip-permissions`,
