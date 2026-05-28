@@ -113,18 +113,21 @@ $ stash search docker
 ## Install
 
 ```bash
-brew install SectorOPS/Stash/stash
+brew install ashhart/stash/stash
 ```
 
 > `brew install stash` (unqualified) matches the unrelated **Stash.app** proxy
 > tool's cask, not this CLI. Always use the fully-qualified
-> `SectorOPS/Stash/stash` form. If you'd previously installed the Cask, you
+> `ashhart/stash/stash` form. If you'd previously installed the Cask, you
 > may also need `brew link --overwrite stash` after installing ours.
+>
+> Existing installs from the old `sectorops/stash` tap continue to work because
+> Homebrew follows GitHub redirects. New installs should use `ashhart/stash`.
 
 To upgrade:
 
 ```bash
-brew update && brew upgrade SectorOPS/Stash/stash
+brew update && brew upgrade ashhart/stash/stash
 ```
 
 ### Install from source

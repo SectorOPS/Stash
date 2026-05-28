@@ -3,8 +3,12 @@
 End-user install:
 
 ```bash
-brew install SectorOPS/Stash/stash
+brew install ashhart/stash/stash
 ```
+
+Existing users who tapped `sectorops/stash` can keep upgrading through that
+tap because Homebrew follows GitHub redirects. New users should use the
+canonical `ashhart/stash` tap path.
 
 This doc covers the layout, the per-release recipe, and the manual fallbacks.
 
@@ -17,11 +21,11 @@ Two repos, by Homebrew tap convention:
 | Repo                                                   | Role                                                          |
 | ------------------------------------------------------ | ------------------------------------------------------------- |
 | `github.com/SectorOPS/Stash`                           | **Source.** Code, issues, releases, CI binaries.              |
-| `github.com/SectorOPS/homebrew-Stash`                  | **Tap.** Only `Formula/stash.rb` + a stub README + audit CI.  |
+| `github.com/ashhart/homebrew-stash`                    | **Tap.** Only `Formula/stash.rb` + a stub README + audit CI.  |
 
 The `homebrew-` prefix on the tap repo is what lets users run
-`brew install SectorOPS/Stash/stash` without an explicit `brew tap` step —
-Homebrew auto-resolves `SectorOPS/Stash` to `SectorOPS/homebrew-Stash`.
+`brew install ashhart/stash/stash` without an explicit `brew tap` step —
+Homebrew auto-resolves `ashhart/stash` to `ashhart/homebrew-stash`.
 
 GitHub release artefacts (per-platform binary tarballs + sha256 sidecars)
 live on the source repo's releases. The tap's formula just points at those
@@ -59,7 +63,7 @@ End users then run:
 
 ```bash
 brew update                                # refresh the tap
-brew upgrade SectorOPS/Stash/stash         # pull the new version
+brew upgrade ashhart/stash/stash           # pull the new version
 ```
 
 Requirements on the release host: `bun` (only if you build locally instead
@@ -74,7 +78,7 @@ Homebrew compares the user's installed version to the `version "X.Y.Z"`
 field in the tap's `Formula/stash.rb`. If the formula is newer:
 
 1. `brew update` fetches the latest commit on the tap's `main` branch.
-2. `brew upgrade SectorOPS/Stash/stash` sees the version bumped, downloads
+2. `brew upgrade ashhart/stash/stash` sees the version bumped, downloads
    the platform's tarball from the source repo's release, verifies the
    sha256, and installs into `$(brew --prefix)/Cellar/stash/X.Y.Z/`,
    symlinking `bin/stash` onto `$PATH`.
@@ -111,7 +115,7 @@ binaries via `scripts/build-release.sh`.
 
 ## Tap-side CI
 
-`SectorOPS/homebrew-Stash/.github/workflows/audit.yml` runs `brew style`
+`ashhart/homebrew-stash/.github/workflows/audit.yml` runs `brew style`
 and `brew audit --strict --formula Formula/stash.rb` on every push and PR.
 This catches most formula-format mistakes (sha mismatches, deprecated DSL,
 missing description) before they land in users' `brew install` output, and
@@ -162,12 +166,12 @@ brew style Formula/stash.rb
 brew audit --strict --formula Formula/stash.rb
 
 # Install via the tap path (matches what end users do).
-brew install SectorOPS/Stash/stash
+brew install ashhart/stash/stash
 stash --version
 stash --help
-brew test SectorOPS/Stash/stash
+brew test ashhart/stash/stash
 
 # Tear down.
 brew uninstall stash
-brew untap SectorOPS/Stash
+brew untap ashhart/stash
 ```
